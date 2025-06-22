@@ -1,0 +1,40 @@
+import pandas as pd
+import requests
+import json
+
+from datetime import datetime, timedelta
+
+url="https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.52&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,wind_speed_10m&forecast_days=7&timezone=auto" 
+response = requests.get(url)
+
+if response.status_code == 200:
+    data = response.json()
+    hourly_data = data['hourly']
+    current = {
+        'time': datetime.fromisoformat(data['current']['time']),
+        'temperature_2m': data['current']['temperature_2m'],
+        'wind_speed_10m': data['current']['wind_speed_10m']
+    }
+    current_df = pd.DataFrame([current])
+
+    print("Current Weather Data:", current_df.head())
+    hourly_df = pd.DataFrame(hourly_data)  
+    hourly_df['time'] = [datetime.fromisoformat(t) for t in hourly_df['time']]
+
+    print("Hourly Weather Data:", hourly_df.head(10))
+
+    df_3days = hourly_df.head(72)
+    t_min = df_3days['temperature_2m'].min()
+    t_max = df_3days['temperature_2m'].max()
+    t_avg = df_3days['temperature_2m'].mean()
+    print(f"3-day Temperature Range: Min={t_min}, Max={t_max}, Avg={t_avg}")
+
+    wind_avg = hourly_df['wind_speed_10m'].mean()
+    print(f"Average Wind Speed: {wind_avg}")
+
+    sl = hourly_df[hourly_df['wind_speed_10m'] > wind_avg]
+    sl_sum = sl['wind_speed_10m'].sum()
+    print("Hours with Wind Speed above Average:",sl_sum)
+else:
+    print(f"Error: {response.status_code}")
+    print(response.text)
